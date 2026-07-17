@@ -12,8 +12,10 @@ It has one row per physical FASTQ pair and carries inherited metadata from the s
 
 | Path | Meaning |
 |---|---|
+| `NOTEBOOKS/` | Notebook-only folder. The active notebooks are `rename_scripts.ipynb` and `database_creation.ipynb`. |
 | `NOTEBOOKS/rename_scripts.ipynb` | Builds and formats the combined source metadata. |
-| `NOTEBOOKS/metadata_all.csv` | Flat combined metadata from source spreadsheets plus rerun metadata. This is mostly an intermediate/provenance table. |
+| `metadata_csv/` | Generated flat metadata CSVs from `rename_scripts.ipynb`. |
+| `metadata_csv/metadata_all.csv` | Flat combined metadata from source spreadsheets plus rerun metadata. This is mostly an intermediate/provenance table. |
 | `NOTEBOOKS/database_creation.ipynb` | Builds normalized database-style objects and saves CSV tables. |
 | `../DB/` | Shared cross-data-type objects: `LY`, `SP`, `LS`, and `BS`. These are intended to be reused by metabolomics. |
 | `DB/` | Microbiomics-specific database outputs: `OB`, `EX`, `LP`, `SR`, `SA`, `FP`, `FF`, `RC`, and `FP_analysis_selection`. |
@@ -136,10 +138,10 @@ The rerun samples are retained as additional sequencing attempts, not replacemen
 | `seq260520_BRLUV` | 359 |
 | `seq260612_DR8PG` | 320 |
 
-The reruns are marked with `is_rerun` in `metadata_all.csv` and propagated as `SA_is_rerun` in the database tables.
+The reruns are marked with `is_rerun` in `metadata_csv/metadata_all.csv` and propagated as `SA_is_rerun` in the database tables.
 
 ## Notes
 
-- `metadata_all.csv` is a combined flat source table. It is useful for tracing provenance, but it intentionally repeats sample metadata.
+- `metadata_csv/metadata_all.csv` is a combined flat source table. It is useful for tracing provenance, but it intentionally repeats sample metadata.
 - `DB/FP_analysis_selection.csv` is the preferred table for analysis selection because it is one row per physical FASTQ pair.
 - `TABLES/read_count.csv` is now the read-count source. The old `trinucleotide_count_full.csv` file has been retired.

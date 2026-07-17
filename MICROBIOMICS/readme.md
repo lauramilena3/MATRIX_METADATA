@@ -1,57 +1,54 @@
 # MICROBIOMICS Metadata
 
-This folder contains the microbiomics metadata workflow and the database-style outputs used to select and describe sequencing data.
+This folder contains the microbiomics metadata workflow and the microbiomics-specific database tables.
 
 The most important analysis-ready table is:
 
-`NOTEBOOKS/database_tables/FP_analysis_selection.csv`
+`DB/FP_analysis_selection.csv`
 
-It has one row per physical FASTQ pair and carries inherited metadata from location/year, plot, biological sample, extraction, library preparation, sequencing run, and read counts.
+It has one row per physical FASTQ pair and carries inherited metadata from the shared field/sample database plus microbiomics-specific extraction, library preparation, sequencing run, FASTQ, and read-count tables.
 
 ## Main Files
 
 | Path | Meaning |
 |---|---|
 | `NOTEBOOKS/rename_scripts.ipynb` | Builds and formats the combined source metadata. |
-| `NOTEBOOKS/metadata_all.csv` | Flat combined metadata from the source spreadsheets plus rerun metadata. This is mostly an intermediate, not the final analysis table. |
-| `NOTEBOOKS/database_creation.ipynb` | Builds the normalized database-style objects and saves the CSV tables. |
-| `NOTEBOOKS/database_tables/` | Full microbiomics database output, including sequencing-specific objects. |
-| `DB/` | Shared field/sample objects that can also be reused by other data types such as metabolomics. |
-| `read_count.csv` | Per-FASTQ-file read counts from the sequencing folders. This replaces the retired `trinucleotide_count_full.csv`. |
-| `sequencing_runs_paths_ERDA.csv` | Lookup table for sequencing run folder names and ERDA paths. |
+| `NOTEBOOKS/metadata_all.csv` | Flat combined metadata from source spreadsheets plus rerun metadata. This is mostly an intermediate/provenance table. |
+| `NOTEBOOKS/database_creation.ipynb` | Builds normalized database-style objects and saves CSV tables. |
+| `../DB/` | Shared cross-data-type objects: `LY`, `SP`, `LS`, and `BS`. These are intended to be reused by metabolomics. |
+| `DB/` | Microbiomics-specific database outputs: `OB`, `EX`, `LP`, `SR`, `SA`, `FP`, `FF`, `RC`, and `FP_analysis_selection`. |
+| `TABLES/read_count.csv` | Per-FASTQ-file read counts from the sequencing folders. This replaces the retired `trinucleotide_count_full.csv`. |
+| `TABLES/sequencing_runs_paths_ERDA.csv` | Lookup table for sequencing run folder names and ERDA paths. |
 | `EXCEL_FILES/` | Source metadata workbooks and the rerun sample list. |
 
-## Shared DB Objects
+## Shared Root DB Objects
 
-The `DB/` folder stores objects that describe the collected plant/sample structure and should not be microbiomics-only:
+These live in repository-level `../DB/`, not in `MICROBIOMICS/DB/`.
 
-| Code | Table | Rows | Description |
-|---|---:|---:|---|
-| `OB` | `OB_object_registry.csv` | 12 | Registry of database object codes. |
-| `LY` | `LY_location_year.csv` | 10 | Location/year context, including control contexts. |
-| `SP` | `SP_sample_plot.csv` | 145 | Sample plot identities. |
-| `LS` | `LS_location_sample_plot.csv` | 426 | Location-year/sample-plot bridge. |
-| `BS` | `BS_biological_sample.csv` | 106 | Collected biological sample or biological control material. |
+| Code | File | Rows | Description |
+|---|---|---:|---|
+| `LY` | `../DB/LY_location_year.csv` | 10 | Location/year context, including control contexts. |
+| `SP` | `../DB/SP_sample_plot.csv` | 145 | Sample plot identities. |
+| `LS` | `../DB/LS_location_sample_plot.csv` | 426 | Location-year/sample-plot bridge. |
+| `BS` | `../DB/BS_biological_sample.csv` | 106 | Collected biological sample or biological control material. |
 
-These are the objects that metabolomics can inherit from later. Microbiomics-specific objects such as `EX`, `LP`, `SA`, `FP`, `FF`, and `RC` stay in `NOTEBOOKS/database_tables/`.
+These are the objects metabolomics should inherit from later. The root `../DB/` folder also contains direct lookup inputs such as `LY.csv` and `SP_*.csv` used by formatting notebooks.
 
-## Full Microbiomics Objects
+## Microbiomics DB Objects
 
-| Code | Table | Rows | Description |
-|---|---:|---:|---|
-| `OB` | `OB_object_registry` | 12 | Object registry. |
-| `LY` | `LY_location_year` | 10 | Location/year context. |
-| `SP` | `SP_sample_plot` | 145 | Sample plot identity. |
-| `LS` | `LS_location_sample_plot` | 426 | Location-year/sample-plot bridge. |
-| `BS` | `BS_biological_sample` | 106 | Biological sample or biological control material. |
-| `EX` | `EX_extraction` | 2692 | DNA extraction from a biological sample. |
-| `LP` | `LP_library_preparation` | 5373 | Library preparation. |
-| `SR` | `SR_sequencing_run` | 20 | Sequencing run folder. |
-| `SA` | `SA_sequencing_attempt` | 6525 | One metadata row sent/assigned to a sequencing run. |
-| `FP` | `FP_fastq_pair` | 8283 | One physical R1/R2 FASTQ pair. |
-| `FF` | `FF_fastq_file` | 16554 | One FASTQ file. |
-| `RC` | `RC_read_count` | 17350 | Read count for one FASTQ file. |
-| `FP` | `FP_analysis_selection` | 8283 | Final per-FASTQ-pair table for choosing data. |
+These live in `MICROBIOMICS/DB/`.
+
+| Code | File | Rows | Description |
+|---|---|---:|---|
+| `OB` | `DB/OB_object_registry.csv` | 12 | Object registry. |
+| `EX` | `DB/EX_extraction.csv` | 2692 | DNA extraction from a biological sample. |
+| `LP` | `DB/LP_library_preparation.csv` | 5373 | Library preparation. |
+| `SR` | `DB/SR_sequencing_run.csv` | 20 | Sequencing run folder. |
+| `SA` | `DB/SA_sequencing_attempt.csv` | 6525 | One metadata row sent/assigned to a sequencing run. |
+| `FP` | `DB/FP_fastq_pair.csv` | 8283 | One physical R1/R2 FASTQ pair. |
+| `FF` | `DB/FF_fastq_file.csv` | 16554 | One FASTQ file. |
+| `RC` | `DB/RC_read_count.csv` | 17350 | Read count for one FASTQ file. |
+| `FP` | `DB/FP_analysis_selection.csv` | 8283 | Final per-FASTQ-pair table for choosing data. |
 
 ## Relationship Drawing
 
@@ -71,7 +68,7 @@ erDiagram
 
 ## Final Per-FASTQ-Pair Table
 
-Use `NOTEBOOKS/database_tables/FP_analysis_selection.csv` when deciding which microbiomics data to analyze.
+Use `DB/FP_analysis_selection.csv` when deciding which microbiomics data to analyze.
 
 Important columns include:
 
@@ -80,7 +77,7 @@ Important columns include:
 | `FP_id` | Stable FASTQ-pair identifier. |
 | `FP_rowname` | Count-table style identifier: `SR_id/forward_fq`. |
 | `FP_forward_path`, `FP_reverse_path` | Relative paths to the physical FASTQ files. |
-| `FP_forward_reads`, `FP_reverse_reads`, `FP_pair_reads` | Read counts from `read_count.csv`. |
+| `FP_forward_reads`, `FP_reverse_reads`, `FP_pair_reads` | Read counts from `TABLES/read_count.csv`. |
 | `FP_has_read_count` | `True` when both R1 and R2 read counts are present. |
 | `FP_include_candidate` | Initial inclusion flag based on read-count availability. |
 | `SA_purpose` | `sample`, `seq_control`, `library_control`, or `sample_and_seq_control`. |
@@ -102,7 +99,7 @@ Current validation summary:
 
 ## Sampling Summary
 
-Field location-year/sample-plot contexts are represented by `LS_location_sample_plot`.
+Field location-year/sample-plot contexts are represented by `../DB/LS_location_sample_plot.csv`.
 
 | Year | Location | LS plot contexts |
 |---:|---|---:|
@@ -134,8 +131,6 @@ Simple view of field plot contexts:
 
 The rerun samples are retained as additional sequencing attempts, not replacements.
 
-Current rerun runs:
-
 | Sequencing run | Rows |
 |---|---:|
 | `seq260520_BRLUV` | 359 |
@@ -146,5 +141,5 @@ The reruns are marked with `is_rerun` in `metadata_all.csv` and propagated as `S
 ## Notes
 
 - `metadata_all.csv` is a combined flat source table. It is useful for tracing provenance, but it intentionally repeats sample metadata.
-- `FP_analysis_selection.csv` is the preferred table for analysis selection because it is one row per physical FASTQ pair.
-- `read_count.csv` is now the read-count source. The old `trinucleotide_count_full.csv` file has been retired.
+- `DB/FP_analysis_selection.csv` is the preferred table for analysis selection because it is one row per physical FASTQ pair.
+- `TABLES/read_count.csv` is now the read-count source. The old `trinucleotide_count_full.csv` file has been retired.

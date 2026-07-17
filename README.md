@@ -8,10 +8,10 @@ The current active normalized workflow is in `MICROBIOMICS`. The same field/samp
 
 | Path | Purpose |
 |---|---|
-| `DB/` | Older shared lookup inputs used by metadata formatting notebooks, especially original `LY` and `SP` sheets. |
+| `DB/` | Shared cross-data-type database objects and lookup inputs. Files are stored directly in this folder, including `LY.csv`, `SP_*.csv`, and generated `LY`, `SP`, `LS`, `BS` tables after rerunning the notebooks. |
 | `MICROBIOMICS/` | Microbiomics metadata, sequencing-run paths, read counts, notebooks, and normalized database outputs. |
-| `MICROBIOMICS/DB/` | Current shared normalized objects generated from microbiomics metadata: `OB`, `LY`, `SP`, `LS`, and `BS`. These are intended to be reusable by future data types. |
-| `MICROBIOMICS/NOTEBOOKS/database_tables/` | Full microbiomics database outputs, including extraction, library preparation, sequencing, FASTQ, and read-count tables. |
+| `MICROBIOMICS/TABLES/` | Microbiomics input/reference CSVs such as `read_count.csv` and `sequencing_runs_paths_ERDA.csv`. |
+| `MICROBIOMICS/DB/` | Microbiomics-specific database outputs, including extraction, library preparation, sequencing, FASTQ, and read-count tables. |
 | `METABOLOMICS/` | Placeholder for metabolomics metadata. Future metabolomics tables should reuse the shared `LY`, `SP`, `LS`, and `BS` concepts where possible. |
 
 ## Current Data Summary
@@ -81,7 +81,7 @@ All current database objects use two-letter prefixes:
 
 | Prefix | Object | Scope |
 |---|---|---|
-| `OB` | Object registry | Shared/documentation |
+| `OB` | Object registry | Microbiomics/documentation |
 | `LY` | Location-year | Shared |
 | `SP` | Sample plot | Shared |
 | `LS` | Location-year/sample-plot bridge | Shared |
@@ -96,6 +96,6 @@ All current database objects use two-letter prefixes:
 
 ## Recommended Rule
 
-Use `MICROBIOMICS/DB/` for shared field/sample objects that other data types should inherit from.
+Use root `DB/` for shared field/sample objects that other data types should inherit from.
 
-Use `MICROBIOMICS/NOTEBOOKS/database_tables/FP_analysis_selection.csv` when choosing microbiomics sequencing data for analysis.
+Use `MICROBIOMICS/DB/FP_analysis_selection.csv` when choosing microbiomics sequencing data for analysis.

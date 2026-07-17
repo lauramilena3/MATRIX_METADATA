@@ -1,0 +1,337 @@
+---
+title: "RDS_curations"
+format: html
+editor: visual
+---
+
+```{r}
+library(phyloseq)
+library(speedyseq)
+library(Biostrings)
+library(tidyverse)
+library(microbiomeutilities)
+library(stringr)
+```
+
+
+## Metadata
+
+```{r}
+metadata <- read_csv("/Users/fst584/Documents/MATRIX/core_microbiome/ASV_processing/Metadata/metadata_all.csv")
+```
+
+### Add rerun samples to metadata
+
+```{r}
+rerun <- read_csv("/Users/fst584/Desktop/new_run/BRLUV_DR8PG_rerun_samples.csv")
+
+metadata_dummy <- metadata %>% 
+  mutate(run_name = str_extract(run_ID, "(?<=_)[^_]*$")) %>% 
+  select(!c(forward_fq, reverse_fq, run_ID))
+
+rerun <- rerun %>% 
+  mutate(run_name = str_extract(run_ID, "(?<=_)[^_]*$")) %>% 
+  left_join(metadata_dummy, by = c("seq_sample_ID", "run_name")) %>% 
+  select(!c(run_name))
+
+
+metadata <- bind_rows(metadata,rerun)
+```
+
+### Create rownames and purpose column
+#### Make seq run samples in DWDQH and JRV78 unique
+
+```{r}
+# Add 'rowname' column (the unique identifier in count table)
+metadata <- metadata %>% 
+  filter(!is.na(forward_fq)) %>% 
+  mutate(rowname = paste0(run_ID, "/", forward_fq)) 
+
+# Find duplicate rows (i.e samples that are counted twice, both as sample and as seq_control)
+dupes <- metadata %>% count(rowname) %>% filter(n>1)
+
+# Create purpose columns and remove duplicate samples
+metadata <- metadata%>% 
+  mutate(run_name = str_extract(run_ID, "(?<=_)[^_]*$")) %>% 
+  mutate(IS_SEQ_CONTROL = ifelse(str_detect(suggested_correct_seq_sample_ID ,pattern=run_name), "Y",
+                                 ifelse(rowname %in% dupes$rowname, "Y", "N"))) %>% 
+  mutate(IS_SAMPLE = ifelse((is.na(LY) | str_detect(LY, pattern = "0000")), "N",
+                            ifelse(str_detect(suggested_correct_seq_sample_ID ,pattern=run_name), "N", "Y"))) %>% 
+  mutate(IS_LIB_CONTROL = ifelse(str_detect(LY, pattern = "0000"), "Y", "N")) %>% 
+  filter(!((rowname %in% dupes$rowname) & IS_SAMPLE == "N")) %>% 
+  mutate(sample = rowname)
+```
+
+### Recreate metadata columns
+
+```{r}
+metadata <- metadata %>% 
+  mutate(TYPE = ifelse(str_detect(source, pattern = "crushed"), "crushed",
+                       ifelse(str_detect(source, pattern = "shotgun_amplicon"), "shotgun_amplicon",
+                              "washed"))) %>% 
+  mutate(location = SP_location) %>% 
+  mutate(spray_fungicide = coalesce(spray, spray_fungicide),
+         spray_fungicide = case_when(
+           spray_fungicide%in% c("y", "yes") ~ "yes",
+           spray_fungicide %in% c("n", "no")  ~ "no",
+           TRUE ~ NA_character_)) %>% 
+  mutate(fertiliser = coalesce(SP_fertiliser, SP_fertilizer)) %>% 
+  select(!c("cultivar", "Cultivar")) %>% 
+  rename(cultivar = SP_cultivar) %>% 
+  mutate(Date = case_when(
+    source == "2022_washed_amplicon" ~ as.Date(sample_date, format = "%d/%m/%y"),
+    source %in% c("2020_washed_amplicon",
+                  "2021_crushed_amplicon",
+                  "2022_crushed_amplicon",
+                  "control_crushed_amplicon",
+                  "2022_washed_shotgun_amplicon",
+                  "2023_crushed_amplicon_16S",
+                  "2023_crushed_amplicon_ITS",
+                  "2023_washed_shotgun_amplicon") ~ as.Date(sample_date, format = "%Y-%m-%d %H:%M:%S")
+  )) %>% 
+  mutate(sample_day_of_the_year = Date-as.Date(paste0("1/1/", YEAR), format = "%d/%m/%Y"))
+```
+
+
+
+### Create sample_data object
+
+```{r}
+metadata_sample_data <- metadata %>% column_to_rownames() %>% sample_data()
+```
+
+
+
+## ITS
+
+### Load ITS phyloseq
+
+```{r}
+ps_ITS <- readRDS("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/ITS/combined_physeq.rds")
+
+sample_data(ps_ITS) <- metadata_sample_data
+```
+
+### Save DNA as biostrings and name ASVs ASV1, ASV2 etc.
+
+```{r}
+dna_ITS <- Biostrings::DNAStringSet(taxa_names(ps_ITS))
+names(dna_ITS) <- taxa_names(ps_ITS)
+ps_ITS <- merge_phyloseq(ps_ITS, dna_ITS)
+taxa_names(ps_ITS) <- paste0("ASV", seq(ntaxa(ps_ITS)))
+```
+
+
+### Get LULU results
+
+```{r}
+LULU_ITS <- readRDS("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/ITS/lulu_curated.rds")
+
+otu_table(ps_ITS) <- t(LULU_ITS$curated_table) %>% otu_table(taxa_are_rows = F)
+```
+
+### Add taxonomy to ASV names
+
+```{r}
+new_ITS_taxtable <- ps_ITS %>%
+  tax_table %>%
+  as.data.frame() %>%
+  mutate(Species = ifelse(is.na(Genus),
+                          Species,
+                          ifelse(is.na(Species),
+                                 Genus,
+                                 paste0(gsub("g__", "", Genus), "_", gsub("s__", "", Species)
+                                        ))))
+
+
+tax_table(ps_ITS) <- as.matrix(new_ITS_taxtable)
+
+ps_ITS <- microbiomeutilities::format_to_besthit(ps_ITS)
+
+ps_ITS <- ps_ITS %>% subset_taxa(!(Phylum  %in% c("k__Fungi", "k__Unclassified")))
+```
+
+
+### Get reports
+
+```{r}
+track_ITS <- read_tsv("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/ITS/combined_read_track.tsv")
+
+track_ITS <- track_ITS %>% 
+  mutate(lost_trimming = raw - trimmed,
+         lost_denoising = trimmed - denoisedF,
+         lost_merging = denoisedF - merged,
+         lost_chimera = merged - nonchim,
+         lost_total = raw - nonchim) %>% 
+  mutate(lost_trimming_pct = lost_trimming/raw,
+         lost_denoising_pct = lost_denoising/trimmed,
+         lost_merging_pct = lost_merging/denoisedF,
+         lost_chimera_pct = lost_chimera/merged,
+         lost_total_pct = lost_total/raw) %>% 
+  mutate(sample = paste0(seq_run, "/", sample, "_R1_001.fastq.gz"))
+
+ps_ITS <- ps_ITS %>% speedyseq::left_join_sample_data(track_ITS)
+
+# count total reads in final object
+sums_ITS <- sample_sums(ps_ITS) %>% data.frame
+colnames(sums_ITS) <- c("ASV_reads")
+sums_ITS$sample <- rownames(sums_ITS)
+
+ps_ITS <- ps_ITS %>% speedyseq::left_join_sample_data(sums_ITS)
+
+ps_ITS <- ps_ITS %>% mutate_sample_data(pass_filter = ifelse((lost_total_pct>=90 | ASV_reads<=1000), "no", "yes"))
+```
+
+
+### Calculate alpha diversity metrics
+
+```{r}
+ps_ITS_counts <- ps_ITS %>% otu_table() %>% data.frame()
+
+diversity_ITS <- ps_ITS_counts %>% 
+  rowwise() %>%
+  mutate(berger_parker = max(c_across(everything())) / sum(c_across(everything())),
+         observed = sum(c_across(!berger_parker) > 0)) %>% 
+  select(berger_parker, observed)
+
+diversity_ITS$sample <- rownames(ps_ITS_counts)
+
+ps_ITS <- ps_ITS %>% speedyseq::left_join_sample_data(diversity_ITS)
+```
+
+
+### Save curated RDS
+
+```{r}
+saveRDS(ps_ITS, "/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/ITS/ITS_ASVs_curated.rds")
+```
+
+
+
+
+
+
+## 16S
+
+### Load 16S phyloseq
+
+```{r}
+ps_16S <- readRDS("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/16S/combined_physeq.rds")
+
+sample_data(ps_16S) <- metadata_sample_data
+```
+
+### Save DNA as biostrings and name ASVs ASV1, ASV2 etc.
+
+```{r}
+dna_16S <- Biostrings::DNAStringSet(taxa_names(ps_16S))
+names(dna_16S) <- taxa_names(ps_16S)
+ps_16S <- merge_phyloseq(ps_16S, dna_16S)
+taxa_names(ps_16S) <- paste0("ASV", seq(ntaxa(ps_16S)))
+```
+
+
+### Get LULU results
+
+```{r}
+LULU_16S <- readRDS("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/16S/lulu_curated.rds")
+
+otu_table(ps_16S) <- t(LULU_16S$curated_table) %>% otu_table(taxa_are_rows = F)
+```
+
+### Add taxonomy to ASV names
+
+```{r}
+ps_16S <- microbiomeutilities::format_to_besthit(ps_16S)
+
+ps_16S <- ps_16S %>% subset_taxa(!(Phylum  %in% c("k__Bacteria", "k__Unclassified")))
+ps_16S <- phyloseq::subset_taxa(ps_16S, (Family!= "Mitochondria" | is.na(Family)) & (Order!="Chloroplast" | is.na(Order)))
+```
+
+
+### Get reports
+
+```{r}
+track_16S <- read_tsv("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/16S/combined_read_track.tsv")
+
+track_16S <- track_16S %>% 
+  mutate(lost_trimming = raw - trimmed,
+         lost_denoising = trimmed - denoisedF,
+         lost_merging = denoisedF - merged,
+         lost_chimera = merged - nonchim,
+         lost_total = raw - nonchim) %>% 
+  mutate(lost_trimming_pct = lost_trimming/raw,
+         lost_denoising_pct = lost_denoising/trimmed,
+         lost_merging_pct = lost_merging/denoisedF,
+         lost_chimera_pct = lost_chimera/merged,
+         lost_total_pct = lost_total/raw) %>% 
+  mutate(sample = paste0(seq_run, "/", sample, "_R1_001.fastq.gz"))
+
+ps_16S <- ps_16S %>% speedyseq::left_join_sample_data(track_16S)
+
+sums_16S <- sample_sums(ps_16S) %>% data.frame
+colnames(sums_16S) <- c("ASV_reads")
+sums_16S$sample <- rownames(sums_16S)
+
+ps_16S <- ps_16S %>% speedyseq::left_join_sample_data(sums_16S)
+
+ps_16S <- ps_16S %>% mutate_sample_data(pass_filter = ifelse((lost_total_pct>=90 | ASV_reads<=1000), "no", "yes"))
+```
+
+### Calculate alpha diversity metrics
+
+```{r}
+ps_16S_counts <- ps_16S %>% otu_table() %>% data.frame()
+
+diversity_16S <- ps_16S_counts %>% 
+  rowwise() %>%
+  mutate(berger_parker = max(c_across(everything())) / sum(c_across(everything())),
+         observed = sum(c_across(!berger_parker) > 0)) %>% 
+  select(berger_parker, observed)
+
+diversity_16S$sample <- rownames(ps_16S_counts)
+
+ps_16S <- ps_16S %>% speedyseq::left_join_sample_data(diversity_16S)
+```
+
+
+### Save curated RDS
+
+```{r}
+saveRDS(ps_16S, "/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/16S/16S_ASVs_curated.rds")
+```
+
+
+
+
+
+
+
+
+
+## Space for investigating metadata
+
+```{r}
+ps_ITS <- readRDS("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/ITS/ITS_ASVs_curated.rds")
+ps_16S <- readRDS("/Users/fst584/Documents/MATRIX/core_microbiome/processed_data/16S/16S_ASVs_curated.rds")
+
+data_ITS <- ps_ITS %>% sample_data %>% data.frame
+data_16S <- ps_16S %>% sample_data %>% data.frame
+```
+
+
+
+```{r}
+ps_16S %>% subset_samples(YEAR == "2021") %>% sample_data %>% data.frame
+ps_16S %>% sample_names %>% data.frame %>% filter(str_detect(., pattern = "21-"))
+```
+
+
+
+```{r}
+metadata %>% filter(!str_detect(forward_fq, "ITS|16S")) %>% filter(amplicon == "ITS")
+
+metadata %>% filter(!str_detect(forward_fq, "ITS|16S")) %>% filter(amplicon == "16S")
+```
+
+

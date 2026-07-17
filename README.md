@@ -11,7 +11,7 @@ The current active normalized workflow is in `MICROBIOMICS`. The same field/samp
 | `DB/` | Shared cross-data-type database objects and lookup inputs. Files are stored directly in this folder, including `LY.csv`, `SP_*.csv`, and generated `LY`, `SP`, `LS`, `BS` tables after rerunning the notebooks. |
 | `MICROBIOMICS/` | Microbiomics metadata, sequencing-run paths, read counts, notebooks, and normalized database outputs. |
 | `MICROBIOMICS/TABLES/` | Microbiomics input/reference CSVs such as `read_count.csv` and `sequencing_runs_paths_ERDA.csv`. |
-| `MICROBIOMICS/metadata_csv/` | Generated flat metadata CSVs from `rename_scripts.ipynb`, including `metadata_all.csv`. |
+| `MICROBIOMICS/metadata_csv/` | Generated flat metadata CSVs from `01_rename_scripts.ipynb`, including `metadata_all.csv`. |
 | `MICROBIOMICS/DB/` | Microbiomics-specific database outputs, including extraction, library preparation, sequencing, FASTQ, and read-count tables. |
 | `METABOLOMICS/` | Placeholder for metabolomics metadata. Future metabolomics tables should reuse the shared `LY`, `SP`, `LS`, and `BS` concepts where possible. |
 

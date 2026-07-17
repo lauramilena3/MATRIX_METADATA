@@ -12,11 +12,11 @@ It has one row per physical FASTQ pair and carries inherited metadata from the s
 
 | Path | Meaning |
 |---|---|
-| `NOTEBOOKS/` | Notebook-only folder. The active notebooks are `rename_scripts.ipynb` and `database_creation.ipynb`. |
-| `NOTEBOOKS/rename_scripts.ipynb` | Builds and formats the combined source metadata. |
-| `metadata_csv/` | Generated flat metadata CSVs from `rename_scripts.ipynb`. |
+| `NOTEBOOKS/` | Notebook-only folder. The active notebooks are `01_rename_scripts.ipynb` and `02_database_creation.ipynb`. |
+| `NOTEBOOKS/01_rename_scripts.ipynb` | Builds and formats the combined source metadata. |
+| `metadata_csv/` | Generated flat metadata CSVs from `01_rename_scripts.ipynb`. |
 | `metadata_csv/metadata_all.csv` | Flat combined metadata from source spreadsheets plus rerun metadata. This is mostly an intermediate/provenance table. |
-| `NOTEBOOKS/database_creation.ipynb` | Builds normalized database-style objects and saves CSV tables. |
+| `NOTEBOOKS/02_database_creation.ipynb` | Builds normalized database-style objects and saves CSV tables. |
 | `../DB/` | Shared cross-data-type objects: `LY`, `SP`, `LS`, and `BS`. These are intended to be reused by metabolomics. |
 | `DB/` | Microbiomics-specific database outputs: `OB`, `EX`, `LP`, `SR`, `SA`, `FP`, `FF`, `RC`, and `FP_analysis_selection`. |
 | `TABLES/read_count.csv` | Per-FASTQ-file read counts from the sequencing folders. This replaces the retired `trinucleotide_count_full.csv`. |
